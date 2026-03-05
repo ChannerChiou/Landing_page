@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASUSWRT | 極致網路掌控 智慧核心</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- GSAP & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        display: ['Orbitron', 'sans-serif'],
+                    },
+                    colors: {
+                        asus: {
+                            dark: '#050505',
+                            darker: '#000000',
+                            gray: '#111111',
+                            cyan: '#00e6e6',
+                            blue: '#0055ff',
+                            red: '#ff0033'
+                        }
+                    },
+                    backgroundImage: {
+                        'glass-gradient': 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base & Reset */
+        body {
+            background-color: #000;
+            color: #fff;
+            overflow-x: hidden;
+            cursor: none; /* Hide default cursor for custom one */
+        }
+        
+        ::selection {
+            background: #00e6e6;
+            color: #000;
+        }
+
+        /* Global Noise Texture */
+        .noise-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Vertical Guide Lines */
+        .guide-lines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 5%;
+        }
+        .guide-line {
+            width: 1px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Custom Cursor */
+        .cursor-dot {
+            position: fixed; top: 0; left: 0;
+            width: 8px; height: 8px;
+            background: #00e6e6;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+            transition: width 0.2s, height 0.2s;
+        }
+        .cursor-ring {
+            position: fixed; top: 0; left: 0;
+            width: 40px; height: 40px;
+            border: 1px solid rgba(0, 230, 230, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease-out, width 0.2s, height 0.2s, background 0.2s;
+        }
+        
+        a:hover ~ .cursor-dot, button:hover ~ .cursor-dot {
+            width: 0; height: 0;
+        }
+        a:hover ~ .cursor-ring, button:hover ~ .cursor-ring {
+            width: 60px; height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            mix-blend-mode: difference;
+        }
+
+        /* Flashlight Glow */
+        .flashlight {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle 600px at var(--x, 50%) var(--y, 50%), rgba(0, 230, 230, 0.08), transparent 80%);
+            z-index: 1;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: var(--tw-gradient-stops);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 1px Border Beam Hover Effect */
+        .border-beam-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .border-beam-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 1px;
+            background: linear-gradient(90deg, transparent, #00e6e6, transparent);
+            transition: left 0.5s ease;
+        }
+        .border-beam-card:hover::before {
+            left: 100%;
+        }
+
+        /* Sonar Pulse */
+        .sonar-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sonar-pulse {
+            position: absolute;
+            width: 100%; height: 100%;
+            border-radius: 9999px;
+            border: 1px solid #00e6e6;
+            animation: sonar 2s linear infinite;
+            pointer-events: none;
+        }
+        .sonar-pulse:nth-child(2) { animation-delay: 0.6s; }
+        .sonar-pulse:nth-child(3) { animation-delay: 1.2s; }
+        
+        @keyframes sonar {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* Marquee */
+        .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+            background: #050505;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 1rem 0;
+        }
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 30s linear infinite;
+        }
+        .marquee-content span {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: rgba(255,255,255,0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: color 0.3s;
+        }
+        .marquee-content span:hover {
+            color: #00e6e6;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Text Clip Reveal Utilities */
+        .clip-text-wrap {
+            overflow: hidden;
+            line-height: 1.2;
+        }
+        .clip-text {
+            display: inline-block;
+            transform: translateY(110%);
+        }
+    </style>
+</head>
+<body class="antialiased font-sans selection:bg-asus-cyan selection:text-black">
+
+    <!-- Elements -->
+    <div class="noise-bg"></div>
+    <div class="cursor-dot"></div>
+    <div class="cursor-ring"></div>
+    
+    <div class="guide-lines">
+        <div class="guide-line"></div>
+        <div class="guide-line"></div>
+        <div class="guide-line"></div>
+        <div class="guide-line"></div>
+        <div class="guide-line"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-40 glass-panel from-black/80 to-transparent border-b-0 py-4 px-6 md:px-12 flex justify-between items-center transition-transform duration-300" id="navbar">
+        <div class="flex items-center gap-2 group cursor-pointer">
+            <iconify-icon icon="simple-icons:asus" class="text-3xl text-white group-hover:text-asus-cyan transition-colors"></iconify-icon>
+            <span class="font-display font-bold text-xl tracking-wider ml-2">ASUS<span class="text-asus-cyan">WRT</span></span>
+        </div>
+        <div class="hidden md:flex gap-8 text-sm font-medium tracking-widest uppercase text-gray-400">
+            <a href="#features" class="hover:text-white transition-colors">核心功能</a>
+            <a href="#security" class="hover:text-white transition-colors">安全防護</a>
+            <a href="#ecosystem" class="hover:text-white transition-colors">生態系統</a>
+        </div>
+        <button class="sonar-wrapper bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-asus-cyan transition-colors relative group">
+            <span class="relative z-10 flex items-center gap-2">立即升級 <iconify-icon icon="solar:arrow-right-linear" class="text-lg group-hover:translate-x-1 transition-transform"></iconify-icon></span>
+            <div class="sonar-pulse border-white/50 group-hover:border-asus-cyan"></div>
+            <div class="sonar-pulse border-white/50 group-hover:border-asus-cyan"></div>
+        </button>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden" id="hero">
+        <div class="flashlight" id="hero-flashlight"></div>
+        
+        <!-- Background Image with Overlay -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop" alt="Abstract Tech" class="w-full h-full object-cover opacity-30 object-center">
+            <div class="absolute inset-0 bg-gradient-to-b from-asus-dark/40 via-asus-dark/80 to-asus-darker"></div>
+        </div>
+
+        <div class="container mx-auto px-6 relative z-10 text-center">
+            <div class="inline-block mb-6 px-4 py-1 rounded-full border border-asus-cyan/30 bg-asus-cyan/5 text-asus-cyan font-display text-xs tracking-[0.2em] uppercase gs-reveal">
+                OS Architecture / v.4.0.0
+            </div>
+            
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 font-display">
+                <div class="clip-text-wrap"><span class="clip-text">掌控全域</span></div>
+                <div class="clip-text-wrap"><span class="clip-text text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500">極致流暢</span></div>
+            </h1>
+            
+            <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-12 font-light leading-relaxed gs-reveal">
+                ASUSWRT 賦予您的路由器超越想像的智慧與效能。<br>搭載直覺式視覺化介面與企業級 AiProtection 防護，為您的每一次連線注入強大動能。
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-6 justify-center items-center gs-reveal">
+                <button class="px-8 py-4 bg-transparent border border-white/20 hover:border-asus-cyan hover:bg-asus-cyan/10 rounded-2xl font-medium tracking-wide flex items-center gap-3 transition-all">
+                    <iconify-icon icon="solar:play-circle-bold" class="text-2xl text-asus-cyan"></iconify-icon> 觀看概念演示
+                </button>
+            </div>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50 gs-reveal">
+            <span class="text-xs uppercase tracking-widest font-display">Scroll</span>
+            <div class="w-[1px] h-12 bg-gradient-to-b from-white to-transparent"></div>
+        </div>
+    </section>
+
+    <!-- Infinite Marquee -->
+    <section class="marquee-container" id="marquee">
+        <div class="marquee-content">
+            <!-- 內容重複兩次以實現無縫滾動 -->
+            <span><iconify-icon icon="solar:cpu-bold-duotone" class="mr-3 text-asus-cyan"></iconify-icon> AiMesh Seamless Roaming</span>
+            <span><iconify-icon icon="solar:shield-check-bold-duotone" class="mr-3 text-asus-red"></iconify-icon> AiProtection Pro</span>
+            <span><iconify-icon icon="solar:gamepad-bold-duotone" class="mr-3 text-purple-500"></iconify-icon> Game Boost</span>
+            <span><iconify-icon icon="solar:global-bold-duotone" class="mr-3 text-blue-500"></iconify-icon> VPN Fusion</span>
+            <span><iconify-icon icon="solar:smart-home-bold-duotone" class="mr-3 text-green-500"></iconify-icon> Smart Home Hub</span>
+            <!-- 重複 -->
+            <span><iconify-icon icon="solar:cpu-bold-duotone" class="mr-3 text-asus-cyan"></iconify-icon> AiMesh Seamless Roaming</span>
+            <span><iconify-icon icon="solar:shield-check-bold-duotone" class="mr-3 text-asus-red"></iconify-icon> AiProtection Pro</span>
+            <span><iconify-icon icon="solar:gamepad-bold-duotone" class="mr-3 text-purple-500"></iconify-icon> Game Boost</span>
+            <span><iconify-icon icon="solar:global-bold-duotone" class="mr-3 text-blue-500"></iconify-icon> VPN Fusion</span>
+            <span><iconify-icon icon="solar:smart-home-bold-duotone" class="mr-3 text-green-500"></iconify-icon> Smart Home Hub</span>
+        </div>
+    </section>
+
+    <!-- Core Features Section -->
+    <section class="py-32 relative z-10" id="features">
+        <div class="container mx-auto px-6 lg:px-12">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-20">
+                <div class="max-w-2xl">
+                    <span class="text-asus-cyan font-display text-sm tracking-widest uppercase mb-4 block">01 // The Brain</span>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6">直覺式智能網管<br><span class="text-gray-500 text-3xl md:text-4xl">重新定義掌控力</span></h2>
+                </div>
+                <p class="text-gray-400 max-w-sm text-sm md:text-base">告別繁瑣設定。圖形化儀表板讓網路狀態、連線裝置與流量數據一目了然，只需彈指之間即可完成進階配置。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Card 1 -->
+                <div class="glass-panel border-beam-card rounded-3xl p-8 from-white/5 to-transparent flex flex-col group feature-card">
+                    <div class="w-14 h-14 rounded-2xl bg-asus-cyan/10 border border-asus-cyan/20 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
+                        <iconify-icon icon="solar:chart-square-bold-duotone" class="text-3xl text-asus-cyan"></iconify-icon>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">視覺化儀表板</h3>
+                    <p class="text-gray-400 leading-relaxed flex-grow">即時監控網路流量、CPU 與 RAM 使用率。將複雜的數據轉化為易於理解的圖形，輕鬆掌握路由器脈動。</p>
+                    <div class="mt-8 pt-6 border-t border-white/10 flex justify-between items-center text-sm font-display text-gray-500 group-hover:text-white transition-colors">
+                        <span>DATA FLOW</span>
+                        <iconify-icon icon="solar:arrow-right-up-linear" class="text-lg"></iconify-icon>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="glass-panel border-beam-card rounded-3xl p-8 from-white/5 to-transparent flex flex-col group feature-card lg:-translate-y-8">
+                    <div class="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
+                        <iconify-icon icon="solar:gamepad-charge-bold-duotone" class="text-3xl text-purple-400"></iconify-icon>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">三段電競加速</h3>
+                    <p class="text-gray-400 leading-relaxed flex-grow">從裝置端到伺服器端，層層優化遊戲封包傳輸路徑。降低 Ping 值與延遲，為您鎖定勝利契機。</p>
+                    <div class="mt-8 pt-6 border-t border-white/10 flex justify-between items-center text-sm font-display text-gray-500 group-hover:text-white transition-colors">
+                        <span>QoS OPTIMIZED</span>
+                        <iconify-icon icon="solar:arrow-right-up-linear" class="text-lg"></iconify-icon>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="glass-panel border-beam-card rounded-3xl p-8 from-white/5 to-transparent flex flex-col group feature-card lg:-translate-y-16">
+                    <div class="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
+                        <iconify-icon icon="solar:global-bold-duotone" class="text-3xl text-blue-400"></iconify-icon>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">VPN Fusion</h3>
+                    <p class="text-gray-400 leading-relaxed flex-grow">允許同時建立一般連線與多個 VPN 通道。即使其他使用者使用 VPN，您的遊戲或串流依然保持全速。</p>
+                    <div class="mt-8 pt-6 border-t border-white/10 flex justify-between items-center text-sm font-display text-gray-500 group-hover:text-white transition-colors">
+                        <span>MULTI-TUNNEL</span>
+                        <iconify-icon icon="solar:arrow-right-up-linear" class="text-lg"></iconify-icon>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Security Section (Split Layout) -->
+    <section class="py-24 relative z-10 bg-asus-dark" id="security">
+        <div class="container mx-auto px-6 lg:px-12">
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <!-- Image Side -->
+                <div class="w-full lg:w-1/2 relative">
+                    <div class="aspect-[4/5] rounded-[2rem] overflow-hidden relative group">
+                        <img src="https://images.unsplash.com/photo-1558002038-1055907df827?q=80&w=2070&auto=format&fit=crop" alt="Smart Home Security" class="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                        
+                        <!-- Floating Badge -->
+                        <div class="absolute bottom-8 left-8 glass-panel p-4 rounded-2xl border-asus-red/30 flex items-center gap-4">
+                            <iconify-icon icon="solar:shield-warning-bold-duotone" class="text-4xl text-asus-red"></iconify-icon>
+                            <div>
+                                <div class="text-xs text-gray-400 font-display">POWERED BY</div>
+                                <div class="font-bold flex items-center gap-2">Trend Micro&trade;</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Decorative Grid Behind Image -->
+                    <div class="absolute -inset-4 border border-white/5 rounded-[2.5rem] -z-10 bg-white/[0.02]"></div>
+                </div>
+
+                <!-- Content Side -->
+                <div class="w-full lg:w-1/2">
+                    <span class="text-asus-red font-display text-sm tracking-widest uppercase mb-4 block">02 // Enterprise Security</span>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-8 leading-tight">商用級安全防護<br>免費為您的家庭打造金鐘罩</h2>
+                    
+                    <div class="space-y-8">
+                        <div class="flex gap-4">
+                            <div class="mt-1"><iconify-icon icon="solar:shield-check-bold" class="text-2xl text-asus-cyan"></iconify-icon></div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-2">終身免費 AiProtection</h4>
+                                <p class="text-gray-400 leading-relaxed">內建與趨勢科技合作的防護系統，無需額外訂閱費用。自動化阻擋惡意網站與入侵攻擊，保護所有連網裝置。</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="mt-1"><iconify-icon icon="solar:users-group-two-rounded-bold" class="text-2xl text-asus-cyan"></iconify-icon></div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-2">進階家長電腦控制</h4>
+                                <p class="text-gray-400 leading-relaxed">一鍵設定孩童上網排程與內容過濾。輕鬆確保安全的數位環境，讓您隨時掌握家中的網路使用狀況。</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="mt-1"><iconify-icon icon="solar:lock-keyhole-minimalistic-bold" class="text-2xl text-asus-cyan"></iconify-icon></div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-2">Instant Guard 一鍵 VPN</h4>
+                                <p class="text-gray-400 leading-relaxed">即使在外使用公共 Wi-Fi，也能透過專屬 App 一鍵建立連回自家路由器的加密通道，確保資料絕不外洩。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ecosystem / Partners -->
+    <section class="py-24 border-t border-white/5 relative z-10" id="ecosystem">
+        <div class="container mx-auto px-6 text-center">
+            <span class="text-gray-500 font-display text-sm tracking-widest uppercase mb-8 block">03 // Global Ecosystem</span>
+            <h2 class="text-2xl font-bold text-gray-300 mb-12">完美相容與全球領導品牌技術認證</h2>
+            
+            <div class="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                <iconify-icon icon="simple-icons:intel" class="text-4xl md:text-5xl hover:text-blue-500 transition-colors cursor-pointer"></iconify-icon>
+                <iconify-icon icon="simple-icons:nvidia" class="text-4xl md:text-5xl hover:text-green-500 transition-colors cursor-pointer"></iconify-icon>
+                <iconify-icon icon="simple-icons:playstation" class="text-4xl md:text-5xl hover:text-blue-600 transition-colors cursor-pointer"></iconify-icon>
+                <iconify-icon icon="simple-icons:xbox" class="text-4xl md:text-5xl hover:text-green-600 transition-colors cursor-pointer"></iconify-icon>
+                <iconify-icon icon="simple-icons:trendmicro" class="text-4xl md:text-5xl hover:text-red-600 transition-colors cursor-pointer"></iconify-icon>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer CTA & Footer -->
+    <footer class="relative z-10 bg-[#020202] border-t border-white/10 pt-32 pb-12 overflow-hidden">
+        <!-- Giant Background Text -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[15vw] font-black font-display text-white/[0.02] whitespace-nowrap pointer-events-none select-none">
+            ASUSWRT
+        </div>
+        
+        <div class="container mx-auto px-6 relative z-10 text-center mb-24">
+            <h2 class="text-5xl md:text-7xl font-bold mb-8">準備好升級網路體驗？</h2>
+            <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">立即探索搭載 ASUSWRT 的全系列路由器，解鎖無與倫比的效能與智能管理。</p>
+            <button class="bg-white text-black px-10 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform duration-300">
+                尋找您的路由器
+            </button>
+        </div>
+
+        <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center border-t border-white/10 pt-8 text-sm text-gray-500">
+            <div class="flex items-center gap-2 mb-4 md:mb-0">
+                <iconify-icon icon="simple-icons:asus" class="text-xl"></iconify-icon>
+                <span>© 2026 ASUSTeK Computer Inc. All rights reserved.</span>
+            </div>
+            <div class="flex gap-6">
+                <a href="#" class="hover:text-white transition-colors">隱私權政策</a>
+                <a href="#" class="hover:text-white transition-colors">使用條款</a>
+                <a href="#" class="hover:text-white transition-colors">支援中心</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- GSAP & Interaction Scripts -->
+    <script>
+        document.addEventListener("DOMContentLoaded", (event) => {
+            gsap.registerPlugin(ScrollTrigger);
+
+            // 1. Custom Cursor Logic
+            const cursorDot = document.querySelector('.cursor-dot');
+            const cursorRing = document.querySelector('.cursor-ring');
+            
+            window.addEventListener('mousemove', (e) => {
+                const x = e.clientX;
+                const y = e.clientY;
+                
+                // Dot moves instantly
+                cursorDot.style.left = x + 'px';
+                cursorDot.style.top = y + 'px';
+                
+                // Ring trails slightly via animation
+                cursorRing.animate({
+                    left: x + 'px',
+                    top: y + 'px'
+                }, { duration: 150, fill: "forwards" });
+            });
+
+            // 2. Flashlight Effect on Hero
+            const heroSection = document.getElementById('hero');
+            const flashlight = document.getElementById('hero-flashlight');
+            
+            heroSection.addEventListener('mousemove', (e) => {
+                const rect = heroSection.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                flashlight.style.setProperty('--x', `${x}px`);
+                flashlight.style.setProperty('--y', `${y}px`);
+            });
+
+            // 3. Navbar Blur on Scroll
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('py-2', 'bg-black/80', 'border-b', 'border-white/10');
+                    navbar.classList.remove('py-4', 'from-black/80', 'to-transparent', 'border-b-0');
+                } else {
+                    navbar.classList.add('py-4', 'from-black/80', 'to-transparent', 'border-b-0');
+                    navbar.classList.remove('py-2', 'bg-black/80', 'border-b', 'border-white/10');
+                }
+            });
+
+            // 4. GSAP Animations
+
+            // Hero Text Clip Reveal
+            const heroTexts = document.querySelectorAll('.clip-text');
+            gsap.to(heroTexts, {
+                y: '0%',
+                duration: 1.2,
+                stagger: 0.2,
+                ease: "power4.out",
+                delay: 0.2
+            });
+
+            // General Reveals
+            const reveals = document.querySelectorAll('.gs-reveal');
+            reveals.forEach(el => {
+                gsap.fromTo(el, 
+                    { opacity: 0, y: 30 },
+                    { 
+                        opacity: 1, 
+                        y: 0, 
+                        duration: 1, 
+                        ease: "power3.out",
+                        delay: 0.8
+                    }
+                );
+            });
+
+            // Features Cards Stagger Reveal
+            gsap.from('.feature-card', {
+                scrollTrigger: {
+                    trigger: '#features',
+                    start: "top 70%",
+                },
+                y: 100,
+                opacity: 0,
+                duration: 0.8,
+                stagger: 0.2,
+                ease: "back.out(1.7)"
+            });
+
+            // Security Image Parallax effect slightly
+            gsap.to('#security img', {
+                scrollTrigger: {
+                    trigger: '#security',
+                    start: "top bottom",
+                    end: "bottom top",
+                    scrub: true
+                },
+                y: 50,
+                ease: "none"
+            });
+        });
+    </script>
+</body>
+</html>
